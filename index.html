@@ -7,12 +7,10 @@
 <title>Yono Snake Game</title>
 
 <style>
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
-  background: #111;
+  background: #101010;
   color: white;
   font-family: Arial, sans-serif;
   text-align: center;
@@ -24,7 +22,6 @@ h1 {
   text-shadow: 0 0 12px limegreen;
 }
 
-/* LOADING SCREEN */
 .screen {
   position: fixed;
   inset: 0;
@@ -36,11 +33,7 @@ h1 {
   z-index: 100;
 }
 
-#loadingScreen h1,
-#startScreen h1 {
-  font-size: 45px;
-  color: limegreen;
-}
+#startScreen { display: none; }
 
 .loader {
   width: 260px;
@@ -61,16 +54,6 @@ h1 {
   to { width: 100%; }
 }
 
-/* MENU */
-#startScreen {
-  display: none;
-}
-
-#startScreen p {
-  color: #aaa;
-}
-
-/* BUTTONS */
 button {
   background: limegreen;
   color: black;
@@ -83,86 +66,80 @@ button {
   cursor: pointer;
 }
 
-button:hover {
-  background: #8cff00;
-}
+button:hover { background: #8cff00; }
 
-/* GAME */
 #gameScreen {
   display: none;
   padding: 10px;
 }
 
 canvas {
-  background: black;
-  border: 3px solid limegreen;
+  background: #050505;
+  border: 4px solid limegreen;
   width: min(600px, 95vw);
   height: auto;
+  display: block;
+  margin: auto;
 }
 </style>
 </head>
 
 <body>
 
-<!-- LOADING -->
+<!-- LOADING SCREEN -->
 <div id="loadingScreen" class="screen">
   <h1>YONO SNAKE</h1>
   <p>Preparing your game...</p>
-
   <div class="loader">
     <div class="progress"></div>
   </div>
-
   <p>Loading...</p>
 </div>
 
-<!-- START MENU -->
+<!-- MAIN MENU -->
 <div id="startScreen" class="screen">
   <h1>YONO SNAKE</h1>
-  <p>Classic Snake Game</p>
+  <p>Classic Snake Challenge</p>
   <p>🍎 Eat apples to earn points!</p>
-  <p>💣 Avoid the bombs!</p>
-
+  <p>💣 Avoid bombs and walls!</p>
   <button onclick="startGame()">START GAME</button>
 </div>
 
 <!-- GAME -->
 <div id="gameScreen">
 
-  <h1>Yono Snake Game</h1>
+<h1>Yono Snake Game</h1>
 
-  <p>Score: <span id="score">0</span></p>
-  <p>High Score: <span id="high">0</span></p>
+<p>Score: <span id="score">0</span></p>
+<p>High Score: <span id="high">0</span></p>
 
-  <canvas id="game" width="600" height="600"></canvas>
+<canvas id="game" width="600" height="600"></canvas>
 
-  <br>
+<p>🍎 Apple = +1 | 💣 Bomb = Game Over</p>
+<p>🧱 Walls = Game Over</p>
+<p>Use Arrow Keys or WASD to move</p>
 
-  <button onclick="restart()">RESTART</button>
-  <button onclick="backToMenu()">MAIN MENU</button>
-
-  <p>Arrow Keys or WASD to move</p>
-  <p>🍎 Apple = +1 Point | 💣 Bomb = Game Over</p>
+<button onclick="restart()">RESTART</button>
+<button onclick="backToMenu()">MAIN MENU</button>
 
 </div>
 
 <script>
-
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 const size = 20;
+const cells = 30;
 
-let snake, apple, bomb;
+let snake, apple, bomb, walls;
 let dx, dy, score, high;
 let gameOver = false;
 let timer;
 
 high = Number(localStorage.getItem("yonoHigh")) || 0;
-
 document.getElementById("high").textContent = high;
 
-// LOADING TO MENU
+// LOADING SCREEN
 window.onload = function() {
   setTimeout(() => {
     document.getElementById("loadingScreen").style.display = "none";
@@ -170,39 +147,11 @@ window.onload = function() {
   }, 2600);
 };
 
-// START GAME
+// START
 function startGame() {
   document.getElementById("startScreen").style.display = "none";
   document.getElementById("gameScreen").style.display = "block";
   restart();
-}
-
-// RESTART
-function restart() {
-  clearInterval(timer);
-
-  snake = [
-    {x: 300, y: 300},
-    {x: 280, y: 300},
-    {x: 260, y: 300}
-  ];
-
-  dx = size;
-  dy = 0;
-  score = 0;
-  gameOver = false;
-
-  document.getElementById("score").textContent = score;
-
-  apple = {x: 100, y: 100};
-  bomb = null;
-
-  spawnApple();
-  spawnBomb();
-
-  draw();
-
-  timer = setInterval(update, 100);
 }
 
 // MAIN MENU
@@ -217,34 +166,100 @@ function backToMenu() {
 // RANDOM POSITION
 function randomPosition() {
   return {
-    x: Math.floor(Math.random() * 30) * size,
-    y: Math.floor(Math.random() * 30) * size
+    x: Math.floor(Math.random() * cells),
+    y: Math.floor(Math.random() * cells)
   };
 }
 
-// APPLE
-function spawnApple() {
-  do {
-    apple = randomPosition();
-  } while (
-    snake.some(p => p.x === apple.x && p.y === apple.y) ||
-    (bomb && bomb.x === apple.x && bomb.y === apple.y)
-  );
+function occupied(x, y) {
+  return snake.some(p => p.x === x && p.y === y) ||
+    walls.some(p => p.x === x && p.y === y);
 }
 
-// BOMB
-function spawnBomb() {
+function freePosition() {
+  let position;
+  let attempts = 0;
+
   do {
-    bomb = randomPosition();
+    position = randomPosition();
+    attempts++;
   } while (
-    snake.some(p => p.x === bomb.x && p.y === bomb.y) ||
-    (apple && bomb.x === apple.x && bomb.y === apple.y)
+    (occupied(position.x, position.y) ||
+     (bomb && bomb.x === position.x && bomb.y === position.y) ||
+     (apple && apple.x === position.x && apple.y === position.y))
+    && attempts < 1000
   );
+
+  return position;
+}
+
+// CREATE WALLS
+function createWalls() {
+  walls = [];
+
+  // Random horizontal and vertical obstacles
+  for (let i = 0; i < 7; i++) {
+    let horizontal = Math.random() < 0.5;
+    let x = 3 + Math.floor(Math.random() * 22);
+    let y = 3 + Math.floor(Math.random() * 22);
+    let length = 3 + Math.floor(Math.random() * 3);
+
+    for (let j = 0; j < length; j++) {
+      let wx = horizontal ? x + j : x;
+      let wy = horizontal ? y : y + j;
+
+      // Keep the starting area clear
+      if (wx >= 10 && wx <= 18 && wy >= 10 && wy <= 18) {
+        continue;
+      }
+
+      walls.push({x: wx, y: wy});
+    }
+  }
+}
+
+// SPAWN APPLE
+function spawnApple() {
+  apple = freePosition();
+}
+
+// SPAWN BOMB
+function spawnBomb() {
+  bomb = freePosition();
+}
+
+// RESTART
+function restart() {
+  clearInterval(timer);
+
+  snake = [
+    {x: 14, y: 15},
+    {x: 13, y: 15},
+    {x: 12, y: 15}
+  ];
+
+  dx = 1;
+  dy = 0;
+  score = 0;
+  gameOver = false;
+
+  document.getElementById("score").textContent = score;
+
+  createWalls();
+
+  apple = null;
+  bomb = null;
+
+  spawnApple();
+  spawnBomb();
+
+  draw();
+
+  timer = setInterval(update, 110);
 }
 
 // UPDATE GAME
 function update() {
-
   if (gameOver) return;
 
   const head = {
@@ -254,8 +269,9 @@ function update() {
 
   // WALL COLLISION
   if (
-    head.x < 0 || head.x >= 600 ||
-    head.y < 0 || head.y >= 600
+    head.x < 0 || head.x >= cells ||
+    head.y < 0 || head.y >= cells ||
+    walls.some(w => w.x === head.x && w.y === head.y)
   ) {
     endGame();
     return;
@@ -265,11 +281,9 @@ function update() {
     head.x === apple.x && head.y === apple.y;
 
   // SELF COLLISION
-  const bodyToCheck = eatingApple
-    ? snake
-    : snake.slice(0, -1);
+  const body = eatingApple ? snake : snake.slice(0, -1);
 
-  if (bodyToCheck.some(p => p.x === head.x && p.y === head.y)) {
+  if (body.some(p => p.x === head.x && p.y === head.y)) {
     endGame();
     return;
   }
@@ -282,29 +296,22 @@ function update() {
 
   snake.unshift(head);
 
-  // EAT APPLE
   if (eatingApple) {
-
     score++;
 
     document.getElementById("score").textContent = score;
 
     if (score > high) {
       high = score;
-
       localStorage.setItem("yonoHigh", high);
-
       document.getElementById("high").textContent = high;
     }
 
     spawnApple();
+    spawnBomb();
+
   } else {
     snake.pop();
-  }
-
-  // RANDOMLY MOVE BOMB AFTER APPLE
-  if (eatingApple) {
-    spawnBomb();
   }
 
   draw();
@@ -314,6 +321,7 @@ function update() {
 function endGame() {
   gameOver = true;
   clearInterval(timer);
+
   draw();
 
   ctx.fillStyle = "red";
@@ -322,69 +330,100 @@ function endGame() {
   ctx.fillText("GAME OVER", 300, 280);
 
   ctx.fillStyle = "white";
-  ctx.font = "20px Arial";
-  ctx.fillText("Final Score: " + score, 300, 320);
+  ctx.font = "22px Arial";
+  ctx.fillText("Final Score: " + score, 300, 325);
 }
 
-// DRAW
+// DRAW GAME
 function draw() {
-
-  ctx.fillStyle = "black";
+  ctx.fillStyle = "#050505";
   ctx.fillRect(0, 0, 600, 600);
 
-  // APPLE
-  ctx.font = "20px Arial";
+  // WALLS
+  walls.forEach(w => {
+    ctx.fillStyle = "#777";
+    ctx.fillRect(w.x * size, w.y * size, size, size);
+
+    ctx.strokeStyle = "#aaa";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(w.x * size, w.y * size, size, size);
+  });
+
+  // APPLE - BIGGER
+  ctx.font = "29px Arial";
   ctx.textAlign = "center";
-  ctx.fillText("🍎", apple.x + 10, apple.y + 17);
+  ctx.textBaseline = "middle";
+  ctx.fillText(
+    "🍎",
+    apple.x * size + 10,
+    apple.y * size + 10
+  );
 
-  // BOMB
-  ctx.fillText("💣", bomb.x + 10, bomb.y + 17);
+  // BOMB - BIGGER
+  ctx.font = "29px Arial";
+  ctx.fillText(
+    "💣",
+    bomb.x * size + 10,
+    bomb.y * size + 10
+  );
 
-  // SNAKE
+  // BIGGER SNAKE
   snake.forEach((part, index) => {
-
-    ctx.fillStyle = index === 0 ? "limegreen" : "green";
+    ctx.fillStyle = index === 0 ? "#7CFC00" : "#159b27";
 
     ctx.fillRect(
-      part.x,
-      part.y,
-      size - 1,
-      size - 1
+      part.x * size + 1,
+      part.y * size + 1,
+      size - 2,
+      size - 2
     );
 
+    ctx.strokeStyle = "#050505";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(
+      part.x * size + 1,
+      part.y * size + 1,
+      size - 2,
+      size - 2
+    );
   });
 }
 
 // KEYBOARD CONTROLS
 document.addEventListener("keydown", function(e) {
-
   const key = e.key.toLowerCase();
 
-  if (document.getElementById("gameScreen").style.display !== "block" || gameOver) return;
+  if (
+    document.getElementById("gameScreen").style.display !== "block" ||
+    gameOver
+  ) return;
 
-  if ((key === "arrowup" || key === "w") && dy === 0) {
+  if (
+    (key === "arrowup" || key === "w") && dy === 0
+  ) {
     dx = 0;
-    dy = -size;
+    dy = -1;
   }
-
-  else if ((key === "arrowdown" || key === "s") && dy === 0) {
+  else if (
+    (key === "arrowdown" || key === "s") && dy === 0
+  ) {
     dx = 0;
-    dy = size;
+    dy = 1;
   }
-
-  else if ((key === "arrowleft" || key === "a") && dx === 0) {
-    dx = -size;
+  else if (
+    (key === "arrowleft" || key === "a") && dx === 0
+  ) {
+    dx = -1;
     dy = 0;
   }
-
-  else if ((key === "arrowright" || key === "d") && dx === 0) {
-    dx = size;
+  else if (
+    (key === "arrowright" || key === "d") && dx === 0
+  ) {
+    dx = 1;
     dy = 0;
   }
-
 });
 
 </script>
-
 </body>
 </html>
