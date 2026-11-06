@@ -15,8 +15,33 @@ body {
   margin: 0;
 }
 
+h1 { color: limegreen; }
+
+canvas {
+  background: black;
+  border: 3px solid limegreen;
+  max-width: 95vw;
+}
+
+button {
+  padding: 14px 35px;
+  margin: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  background: limegreen;
+  color: black;
+  border: none;
+  border-radius: 8px;
+}
+
+button:hover {
+  background: #7cff00;
+  transform: scale(1.05);
+}
+
 /* LOADING SCREEN */
-#loadingScreen {
+.screen {
   position: fixed;
   inset: 0;
   background: #080808;
@@ -27,9 +52,10 @@ body {
   z-index: 100;
 }
 
-#loadingScreen h1 {
-  color: limegreen;
+#loadingScreen h1,
+#startScreen h1 {
   font-size: 45px;
+  color: limegreen;
   text-shadow: 0 0 15px limegreen;
 }
 
@@ -39,11 +65,9 @@ body {
   background: #333;
   border-radius: 20px;
   overflow: hidden;
-  margin-top: 20px;
 }
 
 .progress {
-  width: 0%;
   height: 100%;
   background: limegreen;
   animation: loading 2.5s linear forwards;
@@ -55,23 +79,22 @@ body {
 
 #loadingText {
   color: #aaa;
-  margin-top: 15px;
+}
+
+/* MAIN MENU */
+#startScreen {
+  display: none;
+}
+
+#startScreen p {
+  color: #aaa;
+  font-size: 18px;
 }
 
 /* GAME */
-h1 { color: limegreen; }
-
-canvas {
-  background: black;
-  border: 3px solid limegreen;
-  max-width: 95vw;
-}
-
-button {
-  padding: 12px 24px;
-  margin: 12px;
-  font-size: 16px;
-  cursor: pointer;
+#gameScreen {
+  display: none;
+  padding: 10px;
 }
 </style>
 </head>
@@ -79,7 +102,7 @@ button {
 <body>
 
 <!-- LOADING SCREEN -->
-<div id="loadingScreen">
+<div id="loadingScreen" class="screen">
   <h1>YONO SNAKE</h1>
   <p>Welcome to Yono Snake Game!</p>
   <div class="loader">
@@ -88,18 +111,30 @@ button {
   <p id="loadingText">Loading Game...</p>
 </div>
 
+<!-- MAIN MENU -->
+<div id="startScreen" class="screen">
+  <h1>YONO SNAKE</h1>
+  <p>Classic Snake Game</p>
+  <p>Are you ready to play?</p>
+  <button onclick="startGame()">START GAME</button>
+  <p>Use Arrow Keys or WASD to move</p>
+</div>
+
 <!-- GAME SCREEN -->
-<h1>Yono Snake Game</h1>
+<div id="gameScreen">
+  <h1>Yono Snake Game</h1>
 
-<p>Score: <span id="score">0</span></p>
-<p>High Score: <span id="high">0</span></p>
+  <p>Score: <span id="score">0</span></p>
+  <p>High Score: <span id="high">0</span></p>
 
-<canvas id="game" width="600" height="600"></canvas>
-<br>
+  <canvas id="game" width="600" height="600"></canvas>
+  <br>
 
-<button onclick="restart()">Restart Game</button>
+  <button onclick="restart()">RESTART</button>
+  <button onclick="backToMenu()">MAIN MENU</button>
 
-<p>Use Arrow Keys or WASD to move</p>
+  <p>Use Arrow Keys or WASD to move</p>
+</div>
 
 <script>
 const canvas = document.getElementById("game");
@@ -111,8 +146,23 @@ let snake, food, dx, dy;
 let score, high, gameOver, timer;
 
 high = Number(localStorage.getItem("yonoHigh")) || 0;
+
 document.getElementById("high").textContent = high;
 
+// LOADING
+setTimeout(() => {
+  document.getElementById("loadingScreen").style.display = "none";
+  document.getElementById("startScreen").style.display = "flex";
+}, 2500);
+
+// START GAME
+function startGame() {
+  document.getElementById("startScreen").style.display = "none";
+  document.getElementById("gameScreen").style.display = "block";
+  restart();
+}
+
+// RESTART
 function restart() {
   clearInterval(timer);
 
@@ -131,6 +181,14 @@ function restart() {
   draw();
 }
 
+// MAIN MENU
+function backToMenu() {
+  clearInterval(timer);
+  document.getElementById("gameScreen").style.display = "none";
+  document.getElementById("startScreen").style.display = "flex";
+}
+
+// FOOD
 function placeFood() {
   food = {
     x: Math.floor(Math.random() * 30) * size,
@@ -142,6 +200,7 @@ function placeFood() {
   }
 }
 
+// GAME UPDATE
 function update() {
   if (gameOver) return;
 
@@ -176,9 +235,7 @@ function update() {
 
     if (score > high) {
       high = score;
-
       localStorage.setItem("yonoHigh", high);
-
       document.getElementById("high").textContent = high;
     }
 
@@ -190,6 +247,7 @@ function update() {
   draw();
 }
 
+// DRAW
 function draw() {
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, 600, 600);
@@ -205,6 +263,7 @@ function draw() {
   });
 }
 
+// CONTROLS
 document.addEventListener("keydown", e => {
   const key = e.key.toLowerCase();
 
@@ -222,13 +281,6 @@ document.addEventListener("keydown", e => {
     dy = 0;
   }
 });
-
-// START LOADING
-setTimeout(() => {
-  document.getElementById("loadingScreen").style.display = "none";
-  restart();
-}, 2500);
-
 </script>
 
 </body>
