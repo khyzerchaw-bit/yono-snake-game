@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +7,10 @@
 <title>Yono Snake Game</title>
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
   background: #111;
   color: white;
@@ -14,29 +19,9 @@ body {
   margin: 0;
 }
 
-h1 { color: limegreen; }
-
-canvas {
-  background: black;
-  border: 3px solid limegreen;
-  max-width: 95vw;
-}
-
-button {
-  padding: 14px 35px;
-  margin: 12px;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  background: limegreen;
-  color: black;
-  border: none;
-  border-radius: 8px;
-}
-
-button:hover {
-  background: #7cff00;
-  transform: scale(1.05);
+h1 {
+  color: limegreen;
+  text-shadow: 0 0 12px limegreen;
 }
 
 /* LOADING SCREEN */
@@ -55,39 +40,51 @@ button:hover {
 #startScreen h1 {
   font-size: 45px;
   color: limegreen;
-  text-shadow: 0 0 15px limegreen;
 }
 
 .loader {
-  width: 250px;
-  height: 15px;
+  width: 260px;
+  height: 16px;
   background: #333;
   border-radius: 20px;
   overflow: hidden;
 }
 
 .progress {
+  width: 0;
   height: 100%;
   background: limegreen;
-  animation: loading 2.5s linear forwards;
+  animation: load 2.5s linear forwards;
 }
 
-@keyframes loading {
+@keyframes load {
   to { width: 100%; }
 }
 
-#loadingText {
-  color: #aaa;
-}
-
-/* MAIN MENU */
+/* MENU */
 #startScreen {
   display: none;
 }
 
 #startScreen p {
   color: #aaa;
-  font-size: 18px;
+}
+
+/* BUTTONS */
+button {
+  background: limegreen;
+  color: black;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 30px;
+  margin: 8px;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #8cff00;
 }
 
 /* GAME */
@@ -95,64 +92,83 @@ button:hover {
   display: none;
   padding: 10px;
 }
+
+canvas {
+  background: black;
+  border: 3px solid limegreen;
+  width: min(600px, 95vw);
+  height: auto;
+}
 </style>
 </head>
 
 <body>
 
-<!-- LOADING SCREEN -->
+<!-- LOADING -->
 <div id="loadingScreen" class="screen">
   <h1>YONO SNAKE</h1>
-  <p>Welcome to Yono Snake Game!</p>
+  <p>Preparing your game...</p>
+
   <div class="loader">
     <div class="progress"></div>
   </div>
-  <p id="loadingText">Loading Game...</p>
+
+  <p>Loading...</p>
 </div>
 
-<!-- MAIN MENU -->
+<!-- START MENU -->
 <div id="startScreen" class="screen">
   <h1>YONO SNAKE</h1>
   <p>Classic Snake Game</p>
-  <p>Are you ready to play?</p>
+  <p>🍎 Eat apples to earn points!</p>
+  <p>💣 Avoid the bombs!</p>
+
   <button onclick="startGame()">START GAME</button>
-  <p>Use Arrow Keys or WASD to move</p>
 </div>
 
-<!-- GAME SCREEN -->
+<!-- GAME -->
 <div id="gameScreen">
+
   <h1>Yono Snake Game</h1>
 
   <p>Score: <span id="score">0</span></p>
   <p>High Score: <span id="high">0</span></p>
 
   <canvas id="game" width="600" height="600"></canvas>
+
   <br>
 
   <button onclick="restart()">RESTART</button>
   <button onclick="backToMenu()">MAIN MENU</button>
 
-  <p>Use Arrow Keys or WASD to move</p>
+  <p>Arrow Keys or WASD to move</p>
+  <p>🍎 Apple = +1 Point | 💣 Bomb = Game Over</p>
+
 </div>
 
 <script>
+
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 const size = 20;
 
-let snake, food, dx, dy;
-let score, high, gameOver, timer;
+let snake, apple, bomb;
+let dx, dy, score, high;
+let gameOver = false;
+let timer;
 
 high = Number(localStorage.getItem("yonoHigh")) || 0;
 
 document.getElementById("high").textContent = high;
 
-// LOADING
-setTimeout(() => {
-  document.getElementById("loadingScreen").style.display = "none";
-  document.getElementById("startScreen").style.display = "flex";
-}, 2500);
+// LOADING TO MENU
+window.onload = function() {
+  setTimeout(() => {
+    document.getElementById("loadingScreen").style.display = "none";
+    document.getElementById("startScreen").style.display = "flex";
+  }, 2600);
+};
 
 // START GAME
 function startGame() {
@@ -165,42 +181,70 @@ function startGame() {
 function restart() {
   clearInterval(timer);
 
-  snake = [{x: 300, y: 300}];
-  food = {x: 200, y: 200};
+  snake = [
+    {x: 300, y: 300},
+    {x: 280, y: 300},
+    {x: 260, y: 300}
+  ];
 
   dx = size;
   dy = 0;
-
   score = 0;
   gameOver = false;
 
   document.getElementById("score").textContent = score;
 
-  timer = setInterval(update, 100);
+  apple = {x: 100, y: 100};
+  bomb = null;
+
+  spawnApple();
+  spawnBomb();
+
   draw();
+
+  timer = setInterval(update, 100);
 }
 
 // MAIN MENU
 function backToMenu() {
   clearInterval(timer);
+  gameOver = true;
+
   document.getElementById("gameScreen").style.display = "none";
   document.getElementById("startScreen").style.display = "flex";
 }
 
-// FOOD
-function placeFood() {
-  food = {
+// RANDOM POSITION
+function randomPosition() {
+  return {
     x: Math.floor(Math.random() * 30) * size,
     y: Math.floor(Math.random() * 30) * size
   };
-
-  if (snake.some(p => p.x === food.x && p.y === food.y)) {
-    placeFood();
-  }
 }
 
-// GAME UPDATE
+// APPLE
+function spawnApple() {
+  do {
+    apple = randomPosition();
+  } while (
+    snake.some(p => p.x === apple.x && p.y === apple.y) ||
+    (bomb && bomb.x === apple.x && bomb.y === apple.y)
+  );
+}
+
+// BOMB
+function spawnBomb() {
+  do {
+    bomb = randomPosition();
+  } while (
+    snake.some(p => p.x === bomb.x && p.y === bomb.y) ||
+    (apple && bomb.x === apple.x && bomb.y === apple.y)
+  );
+}
+
+// UPDATE GAME
 function update() {
+
   if (gameOver) return;
 
   const head = {
@@ -208,78 +252,138 @@ function update() {
     y: snake[0].y + dy
   };
 
+  // WALL COLLISION
   if (
     head.x < 0 || head.x >= 600 ||
-    head.y < 0 || head.y >= 600 ||
-    snake.some(p => p.x === head.x && p.y === head.y)
+    head.y < 0 || head.y >= 600
   ) {
-    gameOver = true;
-    clearInterval(timer);
+    endGame();
+    return;
+  }
 
-    draw();
+  const eatingApple =
+    head.x === apple.x && head.y === apple.y;
 
-    ctx.fillStyle = "red";
-    ctx.font = "40px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("GAME OVER", 300, 290);
+  // SELF COLLISION
+  const bodyToCheck = eatingApple
+    ? snake
+    : snake.slice(0, -1);
+
+  if (bodyToCheck.some(p => p.x === head.x && p.y === head.y)) {
+    endGame();
+    return;
+  }
+
+  // BOMB COLLISION
+  if (head.x === bomb.x && head.y === bomb.y) {
+    endGame();
     return;
   }
 
   snake.unshift(head);
 
-  if (head.x === food.x && head.y === food.y) {
+  // EAT APPLE
+  if (eatingApple) {
+
     score++;
 
     document.getElementById("score").textContent = score;
 
     if (score > high) {
       high = score;
+
       localStorage.setItem("yonoHigh", high);
+
       document.getElementById("high").textContent = high;
     }
 
-    placeFood();
+    spawnApple();
   } else {
     snake.pop();
+  }
+
+  // RANDOMLY MOVE BOMB AFTER APPLE
+  if (eatingApple) {
+    spawnBomb();
   }
 
   draw();
 }
 
+// GAME OVER
+function endGame() {
+  gameOver = true;
+  clearInterval(timer);
+  draw();
+
+  ctx.fillStyle = "red";
+  ctx.font = "bold 45px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("GAME OVER", 300, 280);
+
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText("Final Score: " + score, 300, 320);
+}
+
 // DRAW
 function draw() {
+
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, 600, 600);
 
-  ctx.fillStyle = "yellow";
-  ctx.beginPath();
-  ctx.arc(food.x + 10, food.y + 10, 9, 0, Math.PI * 2);
-  ctx.fill();
+  // APPLE
+  ctx.font = "20px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("🍎", apple.x + 10, apple.y + 17);
 
+  // BOMB
+  ctx.fillText("💣", bomb.x + 10, bomb.y + 17);
+
+  // SNAKE
   snake.forEach((part, index) => {
+
     ctx.fillStyle = index === 0 ? "limegreen" : "green";
-    ctx.fillRect(part.x, part.y, size - 1, size - 1);
+
+    ctx.fillRect(
+      part.x,
+      part.y,
+      size - 1,
+      size - 1
+    );
+
   });
 }
 
-// CONTROLS
-document.addEventListener("keydown", e => {
+// KEYBOARD CONTROLS
+document.addEventListener("keydown", function(e) {
+
   const key = e.key.toLowerCase();
+
+  if (document.getElementById("gameScreen").style.display !== "block" || gameOver) return;
 
   if ((key === "arrowup" || key === "w") && dy === 0) {
     dx = 0;
     dy = -size;
-  } else if ((key === "arrowdown" || key === "s") && dy === 0) {
+  }
+
+  else if ((key === "arrowdown" || key === "s") && dy === 0) {
     dx = 0;
     dy = size;
-  } else if ((key === "arrowleft" || key === "a") && dx === 0) {
+  }
+
+  else if ((key === "arrowleft" || key === "a") && dx === 0) {
     dx = -size;
     dy = 0;
-  } else if ((key === "arrowright" || key === "d") && dx === 0) {
+  }
+
+  else if ((key === "arrowright" || key === "d") && dx === 0) {
     dx = size;
     dy = 0;
   }
+
 });
+
 </script>
 
 </body>
