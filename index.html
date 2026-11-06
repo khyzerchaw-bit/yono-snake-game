@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,7 +86,6 @@ canvas {
 
 <body>
 
-<!-- LOADING SCREEN -->
 <div id="loadingScreen" class="screen">
   <h1>YONO SNAKE</h1>
   <p>Preparing your game...</p>
@@ -95,7 +95,6 @@ canvas {
   <p>Loading...</p>
 </div>
 
-<!-- MAIN MENU -->
 <div id="startScreen" class="screen">
   <h1>YONO SNAKE</h1>
   <p>Classic Snake Challenge</p>
@@ -104,18 +103,16 @@ canvas {
   <button onclick="startGame()">START GAME</button>
 </div>
 
-<!-- GAME -->
 <div id="gameScreen">
 
 <h1>Yono Snake Game</h1>
-
 <p>Score: <span id="score">0</span></p>
 <p>High Score: <span id="high">0</span></p>
 
 <canvas id="game" width="600" height="600"></canvas>
 
 <p>🍎 Apple = +1 | 💣 Bomb = Game Over</p>
-<p>🧱 Walls = Game Over</p>
+<p>🧱 Red Walls = Game Over</p>
 <p>Use Arrow Keys or WASD to move</p>
 
 <button onclick="restart()">RESTART</button>
@@ -138,7 +135,6 @@ let timer;
 high = Number(localStorage.getItem("yonoHigh")) || 0;
 document.getElementById("high").textContent = high;
 
-// LOADING SCREEN
 window.onload = function() {
   setTimeout(() => {
     document.getElementById("loadingScreen").style.display = "none";
@@ -146,23 +142,19 @@ window.onload = function() {
   }, 2600);
 };
 
-// START
 function startGame() {
   document.getElementById("startScreen").style.display = "none";
   document.getElementById("gameScreen").style.display = "block";
   restart();
 }
 
-// MAIN MENU
 function backToMenu() {
   clearInterval(timer);
   gameOver = true;
-
   document.getElementById("gameScreen").style.display = "none";
   document.getElementById("startScreen").style.display = "flex";
 }
 
-// RANDOM POSITION
 function randomPosition() {
   return {
     x: Math.floor(Math.random() * cells),
@@ -192,11 +184,9 @@ function freePosition() {
   return position;
 }
 
-// CREATE WALLS
 function createWalls() {
   walls = [];
 
-  // Random horizontal and vertical obstacles
   for (let i = 0; i < 7; i++) {
     let horizontal = Math.random() < 0.5;
     let x = 3 + Math.floor(Math.random() * 22);
@@ -207,7 +197,6 @@ function createWalls() {
       let wx = horizontal ? x + j : x;
       let wy = horizontal ? y : y + j;
 
-      // Keep the starting area clear
       if (wx >= 10 && wx <= 18 && wy >= 10 && wy <= 18) {
         continue;
       }
@@ -217,17 +206,14 @@ function createWalls() {
   }
 }
 
-// SPAWN APPLE
 function spawnApple() {
   apple = freePosition();
 }
 
-// SPAWN BOMB
 function spawnBomb() {
   bomb = freePosition();
 }
 
-// RESTART
 function restart() {
   clearInterval(timer);
 
@@ -253,11 +239,9 @@ function restart() {
   spawnBomb();
 
   draw();
-
   timer = setInterval(update, 110);
 }
 
-// UPDATE GAME
 function update() {
   if (gameOver) return;
 
@@ -266,7 +250,6 @@ function update() {
     y: snake[0].y + dy
   };
 
-  // WALL COLLISION
   if (
     head.x < 0 || head.x >= cells ||
     head.y < 0 || head.y >= cells ||
@@ -279,7 +262,6 @@ function update() {
   const eatingApple =
     head.x === apple.x && head.y === apple.y;
 
-  // SELF COLLISION
   const body = eatingApple ? snake : snake.slice(0, -1);
 
   if (body.some(p => p.x === head.x && p.y === head.y)) {
@@ -287,7 +269,6 @@ function update() {
     return;
   }
 
-  // BOMB COLLISION
   if (head.x === bomb.x && head.y === bomb.y) {
     endGame();
     return;
@@ -297,7 +278,6 @@ function update() {
 
   if (eatingApple) {
     score++;
-
     document.getElementById("score").textContent = score;
 
     if (score > high) {
@@ -308,7 +288,6 @@ function update() {
 
     spawnApple();
     spawnBomb();
-
   } else {
     snake.pop();
   }
@@ -316,11 +295,9 @@ function update() {
   draw();
 }
 
-// GAME OVER
 function endGame() {
   gameOver = true;
   clearInterval(timer);
-
   draw();
 
   ctx.fillStyle = "red";
@@ -333,40 +310,37 @@ function endGame() {
   ctx.fillText("Final Score: " + score, 300, 325);
 }
 
-// DRAW GAME
 function draw() {
   ctx.fillStyle = "#050505";
   ctx.fillRect(0, 0, 600, 600);
 
-  // WALLS
+  // RED WALLS
   walls.forEach(w => {
-    ctx.fillStyle = "#777";
-    ctx.fillRect(w.x * size, w.y * size, size, size);
+    const x = w.x * size;
+    const y = w.y * size;
 
-    ctx.strokeStyle = "#aaa";
+    ctx.fillStyle = "#ff0000";
+    ctx.fillRect(x, y, size, size);
+
+    ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 2;
-    ctx.strokeRect(w.x * size, w.y * size, size, size);
+    ctx.strokeRect(x, y, size, size);
+
+    ctx.fillStyle = "#ff6666";
+    ctx.fillRect(x + 4, y + 4, 12, 12);
   });
 
-  // APPLE - BIGGER
+  // APPLE
   ctx.font = "29px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(
-    "🍎",
-    apple.x * size + 10,
-    apple.y * size + 10
-  );
+  ctx.fillText("🍎", apple.x * size + 10, apple.y * size + 10);
 
-  // BOMB - BIGGER
+  // BOMB
   ctx.font = "29px Arial";
-  ctx.fillText(
-    "💣",
-    bomb.x * size + 10,
-    bomb.y * size + 10
-  );
+  ctx.fillText("💣", bomb.x * size + 10, bomb.y * size + 10);
 
-  // BIGGER SNAKE
+  // SNAKE
   snake.forEach((part, index) => {
     ctx.fillStyle = index === 0 ? "#7CFC00" : "#159b27";
 
@@ -388,7 +362,6 @@ function draw() {
   });
 }
 
-// KEYBOARD CONTROLS
 document.addEventListener("keydown", function(e) {
   const key = e.key.toLowerCase();
 
@@ -397,32 +370,24 @@ document.addEventListener("keydown", function(e) {
     gameOver
   ) return;
 
-  if (
-    (key === "arrowup" || key === "w") && dy === 0
-  ) {
+  if ((key === "arrowup" || key === "w") && dy === 0) {
     dx = 0;
     dy = -1;
   }
-  else if (
-    (key === "arrowdown" || key === "s") && dy === 0
-  ) {
+  else if ((key === "arrowdown" || key === "s") && dy === 0) {
     dx = 0;
     dy = 1;
   }
-  else if (
-    (key === "arrowleft" || key === "a") && dx === 0
-  ) {
+  else if ((key === "arrowleft" || key === "a") && dx === 0) {
     dx = -1;
     dy = 0;
   }
-  else if (
-    (key === "arrowright" || key === "d") && dx === 0
-  ) {
+  else if ((key === "arrowright" || key === "d") && dx === 0) {
     dx = 1;
     dy = 0;
   }
 });
-
 </script>
+
 </body>
 </html>
