@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yono Snake Game</title>
+<style>
+body {
+  background: #111;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+h1 { color: limegreen; }
+canvas {
+  background: black;
+  border: 3px solid limegreen;
+  max-width: 95vw;
+}
+button {
+  padding: 12px 24px;
+  margin: 12px;
+  font-size: 16px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<h1>Yono Snake Game</h1>
+<p>Score: <span id="score">0</span></p>
+<p>High Score: <span id="high">0</span></p>
+
+<canvas id="game" width="600" height="600"></canvas>
+<br>
+<button onclick="restart()">Restart Game</button>
+<p>Use Arrow Keys or WASD to move</p>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const size = 20;
+let snake, food, dx, dy, score, high, gameOver, timer;
+
+high = Number(localStorage.getItem("yonoHigh")) || 0;
+document.getElementById("high").textContent = high;
+
+function restart() {
+  clearInterval(timer);
+  snake = [{x: 300, y: 300}];
+  food = {x: 200, y: 200};
+  dx = size;
+  dy = 0;
+  score = 0;
+  gameOver = false;
+  document.getElementById("score").textContent = score;
+  timer = setInterval(update, 100);
+  draw();
+}
+
+function placeFood() {
+  food = {
+    x: Math.floor(Math.random() * 30) * size,
+    y: Math.floor(Math.random() * 30) * size
+  };
+  if (snake.some(p => p.x === food.x && p.y === food.y)) {
+    placeFood();
+  }
+}
+
+function update() {
+  if (gameOver) return;
+
+  const head = {
+    x: snake[0].x + dx,
+    y: snake[0].y + dy
+  };
+
+  if (head.x < 0 || head.x >= 600 ||
+      head.y < 0 || head.y >= 600 ||
+      snake.some(p => p.x === head.x && p.y === head.y)) {
+    gameOver = true;
+    clearInterval(timer);
+    draw();
+    ctx.fillStyle = "red";
+    ctx.font = "40px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("GAME OVER", 300, 290);
+    return;
+  }
+
+  snake.unshift(head);
+
+  if (head.x === food.x && head.y === food.y) {
+    score++;
+    document.getElementById("score").textContent = score;
+    if (score > high) {
+      high = score;
+      localStorage.setItem("yonoHigh", high);
+      document.getElementById("high").textContent = high;
+    }
+    placeFood();
+  } else {
+    snake.pop();
+  }
+
+  draw();
+}
+
+function draw() {
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, 600, 600);
+
+  ctx.fillStyle = "yellow";
+  ctx.beginPath();
+  ctx.arc(food.x + 10, food.y + 10, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  snake.forEach((part, index) => {
+    ctx.fillStyle = index === 0 ? "limegreen" : "green";
+    ctx.fillRect(part.x, part.y, size - 1, size - 1);
+  });
+}
+
+document.addEventListener("keydown", e => {
+  const key = e.key.toLowerCase();
+
+  if ((key === "arrowup" || key === "w") && dy === 0) {
+    dx = 0; dy = -size;
+  } else if ((key === "arrowdown" || key === "s") && dy === 0) {
+    dx = 0; dy = size;
+  } else if ((key === "arrowleft" || key === "a") && dx === 0) {
+    dx = -size; dy = 0;
+  } else if ((key === "arrowright" || key === "d") && dx === 0) {
+    dx = size; dy = 0;
+  }
+});
+
+restart();
+</script>
+</body>
+</html>
